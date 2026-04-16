@@ -37,8 +37,8 @@ export default function MFA() {
     try {
       setActionLoading(true);
       setMessage("");
+      setOtp("");
       const res = await setupMFA();
-      console.log("MFA setup response:", res.data);
       setSetupData(res.data);
       setMessage("MFA setup generated successfully. Scan the QR code and verify with OTP.");
       setMessageType("success");
@@ -54,7 +54,10 @@ export default function MFA() {
     try {
       setActionLoading(true);
       setMessage("");
-      const res = await enableMFA(otp);
+
+      const cleanOtp = otp.trim();
+      const res = await enableMFA(cleanOtp);
+
       setMessage(res.data?.message || "MFA enabled successfully");
       setMessageType("success");
       setOtp("");
@@ -72,7 +75,10 @@ export default function MFA() {
     try {
       setActionLoading(true);
       setMessage("");
-      const res = await disableMFA(disableOtp);
+
+      const cleanOtp = disableOtp.trim();
+      const res = await disableMFA(cleanOtp);
+
       setMessage(res.data?.message || "MFA disabled successfully");
       setMessageType("success");
       setDisableOtp("");
@@ -178,15 +184,15 @@ export default function MFA() {
                 type="text"
                 placeholder="Enter 6-digit OTP to enable MFA"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value)}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 style={styles.input}
               />
               <button
                 onClick={handleEnable}
-                disabled={actionLoading || !otp.trim()}
+                disabled={actionLoading || otp.length !== 6}
                 style={styles.successButton}
               >
-                Enable MFA
+                {actionLoading ? "Processing..." : "Enable MFA"}
               </button>
             </div>
           </div>
@@ -204,15 +210,15 @@ export default function MFA() {
             type="text"
             placeholder="Enter OTP to disable MFA"
             value={disableOtp}
-            onChange={(e) => setDisableOtp(e.target.value)}
+            onChange={(e) => setDisableOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
             style={styles.input}
           />
           <button
             onClick={handleDisable}
-            disabled={actionLoading || !disableOtp.trim()}
+            disabled={actionLoading || disableOtp.length !== 6}
             style={styles.dangerButton}
           >
-            Disable MFA
+            {actionLoading ? "Processing..." : "Disable MFA"}
           </button>
         </div>
       </div>

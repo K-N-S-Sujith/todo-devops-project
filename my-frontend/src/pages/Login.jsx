@@ -7,6 +7,9 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mfaToken, setMfaToken] = useState("");
+  const [requireMFA, setRequireMFA] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -17,7 +20,24 @@ export default function Login() {
       setLoading(true);
       setMessage("");
 
-      const res = await login({ email, password });
+      const payload = requireMFA
+        ? { email, password, mfaToken }
+        : { email, password };
+
+      const res = await login(payload);
+
+      if (res.data.requireMFA) {
+        setRequireMFA(true);
+        setMessage("Enter the 6-digit OTP from Google Authenticator");
+        setMessageType("success");
+        return;
+      }
+
+      if (!res.data.token) {
+        setMessage("No token received");
+        setMessageType("error");
+        return;
+      }
 
       localStorage.setItem("token", res.data.token);
       setMessage("Login successful");
@@ -73,6 +93,7 @@ export default function Login() {
             placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={requireMFA}
           />
         </div>
 
@@ -84,28 +105,57 @@ export default function Login() {
             placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={requireMFA}
           />
         </div>
 
+        {requireMFA && (
+          <div style={styles.formGroup}>
+            <label style={styles.label}>MFA Code</label>
+            <input
+              style={styles.input}
+              type="text"
+              placeholder="Enter 6-digit OTP"
+              value={mfaToken}
+              onChange={(e) =>
+                setMfaToken(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+            />
+          </div>
+        )}
+
         <button
           onClick={handleLogin}
-          disabled={loading || !email.trim() || !password.trim()}
+          disabled={
+            loading ||
+            !email.trim() ||
+            !password.trim() ||
+            (requireMFA && mfaToken.length !== 6)
+          }
           style={styles.primaryButton}
         >
-          {loading ? "Logging in..." : "Login"}
+          {loading
+            ? "Processing..."
+            : requireMFA
+            ? "Verify OTP & Login"
+            : "Login"}
         </button>
 
-        <div style={styles.divider}>
-          <span style={styles.dividerText}>OR</span>
-        </div>
+        {!requireMFA && (
+          <>
+            <div style={styles.divider}>
+              <span style={styles.dividerText}>OR</span>
+            </div>
 
-        <button
-          onClick={handleGoogleLogin}
-          disabled={googleLoading}
-          style={styles.googleButton}
-        >
-          {googleLoading ? "Redirecting..." : "Login with Google"}
-        </button>
+            <button
+              onClick={handleGoogleLogin}
+              disabled={googleLoading}
+              style={styles.googleButton}
+            >
+              {googleLoading ? "Redirecting..." : "Login with Google"}
+            </button>
+          </>
+        )}
 
         <p style={styles.footerText}>
           Don’t have an account?{" "}
